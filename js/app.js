@@ -97,9 +97,12 @@
     items.forEach(item => {
       const checkbox = item.querySelector('input[type="checkbox"]');
       if (!checkbox) return;
-      // 从 onclick 属性中提取 painId 进行匹配
+      // 从 onclick 属性中提取 painId 进行精确匹配
+      // 使用正则表达式确保精确匹配 painId，避免 p1_1 匹配到 p1_10
       const onclickAttr = item.getAttribute('onclick') || '';
-      if (onclickAttr.includes(painId) || onclickAttr.includes('"id":"' + painId + '"')) {
+      // 匹配 "id":"painId" 或 id:painId 的形式（前后有引号或分隔符）
+      const exactMatchPattern = new RegExp(`["']id["']?\\s*[:=]\\s*["']?${painId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']?`);
+      if (exactMatchPattern.test(onclickAttr)) {
         if (isSelected) {
           item.classList.add('checked');
           checkbox.checked = true;
