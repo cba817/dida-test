@@ -176,19 +176,27 @@
   function renderDetail(c) {
     const hasImage = c.imagePath && c.imagePath.trim();
     const images = c.images || [];
-    const hasMultipleImages = images.length > 1;
 
-    // 多图画廊 HTML
+    // 存储轮播图片
+    window._casesGalleryImages = images;
+    window._casesGalleryCurrent = 0;
+
+    // 轮播 HTML
     const galleryHtml = images.length > 0 ? `
       <div class="cases-detail-gallery">
         <h3 class="gallery-title">📸 案例展示</h3>
-        <div class="gallery-grid">
-          ${images.map((img, idx) => `
-            <div class="gallery-item" onclick="window._casesOpenLightbox('${img}')">
-              <img src="${img}" alt="展示图 ${idx + 1}" loading="lazy"
-                   onerror="this.outerHTML='<span class=\\'gallery-fallback\\'>📷</span>'">
-            </div>
-          `).join('')}
+        <div class="gallery-carousel">
+          <button class="carousel-btn carousel-prev" onclick="window._casesCarouselPrev()" aria-label="上一张">‹</button>
+          <div class="carousel-track" id="_casesCarouselTrack">
+            ${images.map((img, idx) => `
+              <div class="carousel-slide${idx === 0 ? ' active' : ''}" data-index="${idx}">
+                <img src="${img}" alt="展示图 ${idx + 1}" onclick="window._casesOpenLightbox(${idx})" loading="lazy" onerror="this.outerHTML='<div class=\\'carousel-fallback\\'>📷</div>'">
+              </div>`).join('')}
+          </div>
+          <button class="carousel-btn carousel-next" onclick="window._casesCarouselNext()" aria-label="下一张">›</button>
+        </div>
+        <div class="carousel-dots">
+          ${images.map((_, idx) => `<span class="carousel-dot${idx === 0 ? ' active' : ''}" onclick="window._casesCarouselGoTo(${idx})"></span>`).join('')}
         </div>
       </div>` : '';
 
@@ -235,29 +243,116 @@
   }
 
   // =============================================
-  // 图片 Lightbox
+  // 轮播导航
+  // =============================================
+
+  window._casesCarouselPrev = function () {
+    const imgs = window._casesGalleryImages || [];
+    if (imgs.length < 2) return;
+    window._casesGalleryCurrent = (window._casesGalleryCurrent - 1 + imgs.length) % imgs.length;
+    _updateCasesCarousel();
+  };
+
+  window._casesCarouselNext = function () {
+    const imgs = window._casesGalleryImages || [];
+    if (imgs.length < 2) return;
+    window._casesGalleryCurrent = (window._casesGalleryCurrent + 1) % imgs.length;
+    _updateCasesCarousel();
+  };
+
+  window._casesCarouselGoTo = function (idx) {
+    window._casesGalleryCurrent = idx;
+    _updateCasesCarousel();
+  };
+
+  function _updateCasesCarousel() {
+    const track = document.getElementById('_casesCarouselTrack');
+    if (!track) return;
+    const slides = track.querySelectorAll('.carousel-slide');
+    const dots = document.querySelectorAll('.carousel-dot');
+    slides.forEach((s, i) => s.classList.toggle('active', i === window._casesGalleryCurrent));
+    dots.forEach((d, i) => d.classList.toggle('active', i === window._casesGalleryCurrent));
+  }
+
+  // =============================================
+  // 图片 Lightbox（支持左右导航）
   // =============================================
 
   let lightboxEl = null;
 
-  window._casesOpenLightbox = function (src) {
+  window._casesOpenLightbox = function (idx) {
+    const images = window._casesGalleryImages || [];
+    if (images.length === 0) return;
+
     if (!lightboxEl) {
       lightboxEl = document.createElement('div');
       lightboxEl.className = 'cases-lightbox';
-      lightboxEl.innerHTML = '<button class="cases-lightbox-close">&times;</button><div class="cases-lightbox-content"><img src="" alt="大图"></div>';
+      lightboxEl.innerHTML = `
+        <button class="cases-lightbox-close">&times;</button>
+        <button class="lb-nav lb-prev" id="_casesLbPrev" aria-label="上一张">‹</button>
+        <div class="cases-lightbox-content">
+          <img src="" alt="大图" id="_casesLbImg">
+          <div class="lb-counter" id="_casesLbCounter"></div>
+        </div>
+        <button class="lb-nav lb-next" id="_casesLbNext" aria-label="下一张">›</button>
+      `;
       lightboxEl.addEventListener('click', (e) => {
         if (e.target === lightboxEl || e.target.classList.contains('cases-lightbox-close')) {
           lightboxEl.classList.remove('open');
           document.body.style.overflow = '';
         }
       });
+
+      // 键盘支持
+      document.addEventListener('keydown', (e) => {
+        if (!lightboxEl || !lightboxEl.classList.contains('open')) return;
+        if (e.key === 'Escape') {
+          lightboxEl.classList.remove('open');
+          document.body.style.overflow = '';
+        }
+        if (e.key === 'ArrowLeft') document.getElementById('_casesLbPrev')?.click();
+        if (e.key === 'ArrowRight') document.getElementById('_casesLbNext')?.click();
+      });
+
       document.body.appendChild(lightboxEl);
     }
-    const img = lightboxEl.querySelector('img');
-    img.src = src;
+
+    window._casesLbCurrent = idx;
+    _updateCasesLightbox();
     lightboxEl.classList.add('open');
     document.body.style.overflow = 'hidden';
   };
+
+  function _updateCasesLightbox() {
+    const images = window._casesGalleryImages || [];
+    const idx = window._casesLbCurrent || 0;
+    const img = document.getElementById('_casesLbImg');
+    const counter = document.getElementById('_casesLbCounter');
+    const prev = document.getElementById('_casesLbPrev');
+    const next = document.getElementById('_casesLbNext');
+
+    if (!img) return;
+    img.src = images[idx];
+
+    if (counter) counter.textContent = `${idx + 1} / ${images.length}`;
+    if (prev) prev.style.display = images.length > 1 ? '' : 'none';
+    if (next) next.style.display = images.length > 1 ? '' : 'none';
+
+    if (prev) {
+      prev.onclick = (e) => {
+        e.stopPropagation();
+        window._casesLbCurrent = (window._casesLbCurrent - 1 + images.length) % images.length;
+        _updateCasesLightbox();
+      };
+    }
+    if (next) {
+      next.onclick = (e) => {
+        e.stopPropagation();
+        window._casesLbCurrent = (window._casesLbCurrent + 1) % images.length;
+        _updateCasesLightbox();
+      };
+    }
+  }
 
   // =============================================
   // 全局函数（供 onclick 调用）
