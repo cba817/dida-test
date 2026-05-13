@@ -304,7 +304,7 @@
           <p class="section-subtitle">我们不设计一面墙，我们设计您的商业增长路径</p>
 
           <div class="package-grid">
-            ${renderPackages()}
+            ${renderPackages(s.pains.length)}
           </div>
         </div>
 
@@ -330,13 +330,23 @@
   // 6. 套餐渲染
   // ==========================================
 
-  function renderPackages() {
+  function renderPackages(painCount) {
+    // 根据痛点数量决定主推套餐
+    // 1-3个痛点 → 基础信任系统(index 0)
+    // 4-6个痛点 → 成交转化系统(index 1)
+    // 7-10个痛点 → 空间增长全案(index 2)
+    let featuredIndex = 1; // 默认中间档
+    if (painCount <= 3) {
+      featuredIndex = 0;
+    } else if (painCount >= 7) {
+      featuredIndex = 2;
+    }
+
     const pkgs = [
       {
         title: '🟢 基础信任系统',
         price: '¥6,800',
         priceNote: '起',
-        featured: false,
         result: { title: '交付结果', items: ['品牌正规化感官提升', '消除初访客户的基本不信任感'] },
         features: ['LOGO立体视觉系统', '品牌主色调标准应用', '超级标语墙设计', '基础灯光氛围方案']
       },
@@ -344,8 +354,6 @@
         title: '🔵 成交转化系统',
         price: '¥18,800',
         priceNote: '',
-        featured: true,
-        badge: '🏆 主推方案',
         result: { title: '核心增长结果', items: ['转化率提升 10%-40%', '降低沟通成本，缩短成交周期'] },
         features: [
           '<strong>品牌故事墙：</strong>建立信任背书',
@@ -358,7 +366,6 @@
         title: '🔴 空间增长全案',
         price: '¥58,000',
         priceNote: '+',
-        featured: false,
         result: { title: '核心增长结果', items: ['空间自带流量，成为内容工厂', '品牌溢价倍增，招商利器'] },
         features: [
           '<strong>客户参观动线：</strong>剧场版路径设计',
@@ -368,6 +375,12 @@
         ]
       }
     ];
+
+    // 动态设置主推套餐
+    pkgs.forEach((pkg, index) => {
+      pkg.featured = index === featuredIndex;
+      pkg.badge = index === featuredIndex ? '🏆 主推方案' : null;
+    });
 
     return pkgs.map(p => `
       <div class="pkg-card ${p.featured ? 'featured' : ''}">
