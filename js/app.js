@@ -98,10 +98,12 @@
       const checkbox = item.querySelector('input[type="checkbox"]');
       if (!checkbox) return;
       // 从 onclick 属性中提取 painId 进行精确匹配
-      // 使用正则表达式确保精确匹配 painId，避免 p1_1 匹配到 p1_10
+      // 注意：HTML 中的属性值经过了实体编码，&quot; 表示 "
       const onclickAttr = item.getAttribute('onclick') || '';
-      // 匹配 "id":"painId" 或 id:painId 的形式（前后有引号或分隔符）
-      const exactMatchPattern = new RegExp(`["']id["']?\\s*[:=]\\s*["']?${painId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["']?`);
+      // 匹配 &quot;id&quot;:&quot;painId&quot; 的形式（HTML实体编码后的JSON格式）
+      // 使用单词边界确保精确匹配，避免 p1_1 匹配到 p1_10
+      const escapedId = painId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const exactMatchPattern = new RegExp(`&quot;id&quot;:&quot;${escapedId}&quot;`);
       if (exactMatchPattern.test(onclickAttr)) {
         if (isSelected) {
           item.classList.add('checked');
