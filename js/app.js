@@ -92,14 +92,18 @@
   // 3. 第1步：选择驱动
   // ==========================================
 
-  // 3D滚动痛点关键词列表
+  // 横向瀑布流痛点关键词列表
   const painKeywords = [
     '获客成本高', '产品同质化', '渠道冲突', '用户流失',
     '成交周期长', '品牌势能弱', '团队执行力差', '私域运营难',
-    '差异化不足', '复购率低', '招商困难', '转化效率低'
+    '差异化不足', '复购率低', '招商困难', '转化效率低',
+    '价格战泥潭', '库存积压', '会员活跃度低', '口碑传播弱'
   ];
 
   function renderStep1(config) {
+    // 复制一份关键词用于无缝滚动
+    const allKeywords = [...painKeywords, ...painKeywords];
+    
     return `
       <section class="hero container">
         <h1>让空间成为第一位销售</h1>
@@ -114,13 +118,13 @@
           `).join('')}
         </div>
         
-        <!-- 3D滚动痛点关键词展示 -->
+        <!-- 横向瀑布流痛点关键词展示 -->
         <div class="pain-tags-3d-container">
           <div class="pain-tags-3d-title">💡 我们将帮您解决这些增长难题</div>
-          <div class="pain-tags-3d-wrapper">
-            <div class="pain-tags-3d-track">
-              ${painKeywords.map(keyword => `
-                <span class="pain-tag-3d">${keyword}</span>
+          <div class="pain-tags-marquee-wrapper">
+            <div class="pain-tags-marquee-track">
+              ${allKeywords.map(keyword => `
+                <span class="pain-tag-flow">${keyword}</span>
               `).join('')}
             </div>
           </div>
