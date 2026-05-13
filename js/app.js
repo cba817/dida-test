@@ -68,6 +68,10 @@
     const s = state.get();
     const config = state.getConfig();
 
+    // 保存当前滚动位置，防止同一步骤内 DOM 替换导致的跳动
+    const scrollPos = window.scrollY;
+    const scrollHeightBefore = document.documentElement.scrollHeight;
+
     let html = '';
 
     if (s.step === 1) {
@@ -80,10 +84,15 @@
 
     app.innerHTML = html;
     
-    // 只有在步骤切换时才滚动到顶部，避免选择痛点时页面跳动
-    // lastStep 为 null 时是首次渲染，不滚动
+    // 只有在步骤切换时（step 值变化）才平滑滚动到顶部
     if (lastStep !== null && s.step !== lastStep) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (lastStep !== null && s.step === lastStep) {
+      // 同一步骤内：恢复滚动位置，防止 DOM 替换导致的跳动
+      // 如果内容高度变化，按比例恢复位置
+      const scrollHeightAfter = document.documentElement.scrollHeight;
+      const ratio = scrollHeightBefore > 0 ? scrollHeightAfter / scrollHeightBefore : 1;
+      window.scrollTo(0, Math.min(scrollPos * ratio, scrollHeightAfter));
     }
     lastStep = s.step;
   }
