@@ -849,7 +849,106 @@ footer {
   transform: translateY(0);
 }
 
-/* === 17. 响应式断点 (Mobile First) === */
+/* === 17. 3D滚动痛点关键词展示 === */
+.pain-tags-3d-container {
+  margin-top: 60px;
+  text-align: center;
+  perspective: 1000px;
+  overflow: hidden;
+  padding: 20px 0;
+}
+
+.pain-tags-3d-title {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin-bottom: 24px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.pain-tags-3d-wrapper {
+  position: relative;
+  height: 200px;
+  transform-style: preserve-3d;
+}
+
+.pain-tags-3d-track {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: rotate3d 20s linear infinite;
+}
+
+.pain-tags-3d-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes rotate3d {
+  from { transform: rotateX(0deg); }
+  to { transform: rotateX(360deg); }
+}
+
+.pain-tag-3d {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center center -100px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-card);
+}
+
+.pain-tag-3d:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: scale(1.1) !important;
+  z-index: 10;
+}
+
+/* 3D位置分布 - 12个关键词均匀分布 */
+.pain-tag-3d:nth-child(1) { transform: translate(-50%, -50%) rotateX(0deg) translateZ(100px); }
+.pain-tag-3d:nth-child(2) { transform: translate(-50%, -50%) rotateX(30deg) translateZ(100px); }
+.pain-tag-3d:nth-child(3) { transform: translate(-50%, -50%) rotateX(60deg) translateZ(100px); }
+.pain-tag-3d:nth-child(4) { transform: translate(-50%, -50%) rotateX(90deg) translateZ(100px); }
+.pain-tag-3d:nth-child(5) { transform: translate(-50%, -50%) rotateX(120deg) translateZ(100px); }
+.pain-tag-3d:nth-child(6) { transform: translate(-50%, -50%) rotateX(150deg) translateZ(100px); }
+.pain-tag-3d:nth-child(7) { transform: translate(-50%, -50%) rotateX(180deg) translateZ(100px); }
+.pain-tag-3d:nth-child(8) { transform: translate(-50%, -50%) rotateX(210deg) translateZ(100px); }
+.pain-tag-3d:nth-child(9) { transform: translate(-50%, -50%) rotateX(240deg) translateZ(100px); }
+.pain-tag-3d:nth-child(10) { transform: translate(-50%, -50%) rotateX(270deg) translateZ(100px); }
+.pain-tag-3d:nth-child(11) { transform: translate(-50%, -50%) rotateX(300deg) translateZ(100px); }
+.pain-tag-3d:nth-child(12) { transform: translate(-50%, -50%) rotateX(330deg) translateZ(100px); }
+
+/* 渐变遮罩 */
+.pain-tags-3d-wrapper::before,
+.pain-tags-3d-wrapper::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.pain-tags-3d-wrapper::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--bg), transparent);
+}
+
+.pain-tags-3d-wrapper::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg), transparent);
+}
+
+/* === 18. 响应式断点 (Mobile First) === */
 
 /* 平板 (≥ 768px) */
 @media (min-width: 768px) {
