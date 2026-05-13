@@ -849,7 +849,7 @@ footer {
   transform: translateY(0);
 }
 
-/* === 17. 横向瀑布流痛点关键词展示 === */
+/* === 17. 三排错落滚动痛点关键词展示 === */
 .pain-tags-3d-container {
   margin-top: 60px;
   text-align: center;
@@ -893,20 +893,47 @@ footer {
   background: linear-gradient(to left, var(--bg), transparent);
 }
 
-.pain-tags-marquee-track {
+/* 三排错落滚动轨道 */
+.pain-tags-row {
   display: flex;
   gap: 16px;
-  animation: marquee 30s linear infinite;
   width: fit-content;
+  margin-bottom: 12px;
 }
 
-.pain-tags-marquee-track:hover {
+.pain-tags-row:last-child {
+  margin-bottom: 0;
+}
+
+/* 第一排：向左滚动，正常速度 */
+.pain-tags-row.row-1 {
+  animation: marquee-left 25s linear infinite;
+}
+
+/* 第二排：向右滚动，较慢速度，错位开始 */
+.pain-tags-row.row-2 {
+  animation: marquee-right 35s linear infinite;
+  transform: translateX(-25%);
+}
+
+/* 第三排：向左滚动，最快速度，更多错位 */
+.pain-tags-row.row-3 {
+  animation: marquee-left 20s linear infinite;
+  transform: translateX(-50%);
+}
+
+.pain-tags-marquee-wrapper:hover .pain-tags-row {
   animation-play-state: paused;
 }
 
-@keyframes marquee {
+@keyframes marquee-left {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-right {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
 }
 
 .pain-tag-flow {
@@ -926,7 +953,7 @@ footer {
 .pain-tag-flow:hover {
   border-color: var(--color-accent);
   color: var(--color-accent);
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.05);
   box-shadow: 0 4px 16px rgba(82, 196, 26, 0.2);
 }
 
