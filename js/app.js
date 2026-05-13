@@ -68,10 +68,6 @@
     const s = state.get();
     const config = state.getConfig();
 
-    // 保存当前滚动位置，防止同一步骤内 DOM 替换导致的跳动
-    const scrollPos = window.scrollY;
-    const scrollHeightBefore = document.documentElement.scrollHeight;
-
     let html = '';
 
     if (s.step === 1) {
@@ -84,18 +80,71 @@
 
     app.innerHTML = html;
     
-    // 只有在步骤切换时（step 值变化）才平滑滚动到顶部
+    // 步骤切换时平滑滚动到顶部
     if (lastStep !== null && s.step !== lastStep) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (lastStep !== null && s.step === lastStep) {
-      // 同一步骤内：恢复滚动位置，防止 DOM 替换导致的跳动
-      // 如果内容高度变化，按比例恢复位置
-      const scrollHeightAfter = document.documentElement.scrollHeight;
-      const ratio = scrollHeightBefore > 0 ? scrollHeightAfter / scrollHeightBefore : 1;
-      window.scrollTo(0, Math.min(scrollPos * ratio, scrollHeightAfter));
     }
     lastStep = s.step;
   }
+
+  // ==========================================
+  // 2.1 痛点勾选局部更新（不触发全量render）
+  // ==========================================
+
+  /** 更新单个痛点项的选中样式，不重建整个DOM */
+  function updatePainItemUI(painId, isSelected) {
+    const items = document.querySelectorAll('.check-item');
+    items.forEach(item => {
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      if (!checkbox) return;
+      // 从 onclick 属性中提取 painId 进行匹配
+      const onclickAttr = item.getAttribute('onclick') || '';
+      if (onclickAttr.includes(painId) || onclickAttr.includes('"id":"' + painId + '"')) {
+        if (isSelected) {
+          item.classList.add('checked');
+          checkbox.checked = true;
+        } else {
+          item.classList.remove('checked');
+          checkbox.checked = false;
+        }
+      }
+    });
+    // 更新计数
+    const countEl = document.getElementById('selectedCount');
+    if (countEl) {
+      countEl.textContent = state.get().pains.length;
+    }
+  }
+
+  // 拦截 togglePain：在 step2 时使用局部更新而非全量 render
+  const originalTogglePain = state.togglePain;
+  // 标记位：当 step2 中 togglePain 时设为 true，阻止 subscribe 触发全量 render
+  let skipNextRender = false;
+
+  state.togglePain = function(pain) {
+    const s = state.get();
+    const painId = typeof pain === 'object' ? pain.id : pain;
+    const painText = typeof pain === 'object' ? pain.text : pain;
+
+    // 判断当前是否已选中
+    const wasSelected = s.pains.some(p => {
+      if (typeof p === 'object') return p.id === painId || p.text === painText;
+      return p === painText;
+    });
+
+    // 标记跳过下一次 render
+    if (s.step === 2) {
+      skipNextRender = true;
+    }
+
+    // 调用原始方法更新状态（会触发 notify → subscribe）
+    originalTogglePain(pain);
+
+    // 局部 DOM 更新
+    if (s.step === 2) {
+      updatePainItemUI(painId, !wasSelected);
+    }
+  };
 
   // ==========================================
   // 3. 第1步：选择驱动
@@ -593,6 +642,11 @@
 
     // 订阅状态变化，自动重新渲染
     state.subscribe(() => {
+      // 如果是 step2 中的痛点勾选，跳过全量 render（已做局部更新）
+      if (skipNextRender) {
+        skipNextRender = false;
+        return;
+      }
       render();
     });
   }
