@@ -62,7 +62,7 @@
   // ==========================================
 
   // 记录上一次的 step，用于判断是否需要滚动
-  let lastStep = 1;
+  let lastStep = null;
 
   function render() {
     const s = state.get();
@@ -81,10 +81,11 @@
     app.innerHTML = html;
     
     // 只有在步骤切换时才滚动到顶部，避免选择痛点时页面跳动
-    if (s.step !== lastStep) {
+    // lastStep 为 null 时是首次渲染，不滚动
+    if (lastStep !== null && s.step !== lastStep) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      lastStep = s.step;
     }
+    lastStep = s.step;
   }
 
   // ==========================================
@@ -187,7 +188,10 @@
           <h2>📋 您的空间增长诊断报告</h2>
           <div class="report-meta">
             <span class="report-tag">🎯 驱动类型：${s.driver}</span>
-            ${s.pains.map(p => `<span class="report-tag">🔴 ${p}</span>`).join('')}
+            ${s.pains.map(p => {
+              const painText = typeof p === 'object' ? p.text : p;
+              return `<span class="report-tag">🔴 ${painText}</span>`;
+            }).join('')}
           </div>
           <div class="report-body">
             ${advice.split('\n').map(line => {
@@ -227,9 +231,10 @@
         <!-- 信任标识 -->
         ${renderTrustSection()}
 
-        <!-- 重新开始 -->
-        <div style="text-align:center; margin-top:60px">
-          <button class="btn btn-secondary" onclick="AppState.reset()">🔄 重新开始诊断</button>
+        <!-- 导航按钮 -->
+        <div style="text-align:center; margin-top:60px; display:flex; flex-direction:column; align-items:center; gap:12px">
+          <button class="btn btn-secondary" onclick="AppState.patch({ step: 2, pains: [] })">← 重新选择痛点</button>
+          <button class="btn btn-outline btn-sm" onclick="AppState.reset()">🔄 重新开始诊断</button>
         </div>
       </section>
     `;
