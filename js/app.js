@@ -712,11 +712,18 @@
     const galleryHtml = images.length > 0 ? `
       <div class="cases-detail-gallery" style="margin:16px 0">
         <h3 class="gallery-title">📸 案例展示</h3>
-        <div class="gallery-grid">
-          ${images.map((img, idx) => `
-            <div class="gallery-item" onclick="window._openCaseLightbox('${img}')">
-              <img src="${img}" alt="展示图 ${idx + 1}" loading="lazy" onerror="this.outerHTML='<span class=\\'gallery-fallback\\'>📷</span>'">
-            </div>`).join('')}
+        <div class="gallery-carousel">
+          <button class="carousel-btn carousel-prev" onclick="window._carouselPrev()" aria-label="上一张">‹</button>
+          <div class="carousel-track" id="_carouselTrack">
+            ${images.map((img, idx) => `
+              <div class="carousel-slide${idx === 0 ? ' active' : ''}" data-index="${idx}">
+                <img src="${img}" alt="展示图 ${idx + 1}" onclick="window._openCaseLightbox(${idx})" loading="lazy" onerror="this.outerHTML='<div class=\\'carousel-fallback\\'>📷</div>'">
+              </div>`).join('')}
+          </div>
+          <button class="carousel-btn carousel-next" onclick="window._carouselNext()" aria-label="下一张">›</button>
+        </div>
+        <div class="carousel-dots">
+          ${images.map((_, idx) => `<span class="carousel-dot${idx === 0 ? ' active' : ''}" onclick="window._carouselGoTo(${idx})"></span>`).join('')}
         </div>
       </div>` : '';
 
@@ -756,9 +763,42 @@
       </div>
     `;
 
+    // 存储轮播图片数据
+    window._galleryImages = c.images || [];
+    window._galleryCurrent = 0;
+
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
   };
+
+  // 轮播导航
+  window._carouselPrev = function () {
+    const imgs = window._galleryImages || [];
+    if (imgs.length < 2) return;
+    window._galleryCurrent = (window._galleryCurrent - 1 + imgs.length) % imgs.length;
+    _updateCarousel();
+  };
+
+  window._carouselNext = function () {
+    const imgs = window._galleryImages || [];
+    if (imgs.length < 2) return;
+    window._galleryCurrent = (window._galleryCurrent + 1) % imgs.length;
+    _updateCarousel();
+  };
+
+  window._carouselGoTo = function (idx) {
+    window._galleryCurrent = idx;
+    _updateCarousel();
+  };
+
+  function _updateCarousel() {
+    const track = document.getElementById('_carouselTrack');
+    if (!track) return;
+    const slides = track.querySelectorAll('.carousel-slide');
+    const dots = document.querySelectorAll('.carousel-dot');
+    slides.forEach((s, i) => s.classList.toggle('active', i === window._galleryCurrent));
+    dots.forEach((d, i) => d.classList.toggle('active', i === window._galleryCurrent));
+  }
 
   window._closeHomeCaseDetail = function () {
     const overlay = document.getElementById('homeCasesDetailOverlay');
@@ -766,14 +806,25 @@
     document.body.style.overflow = '';
   };
 
-  // 案例 Lightbox
-  window._openCaseLightbox = function (src) {
+  // 案例 Lightbox（支持左右导航）
+  window._openCaseLightbox = function (idx) {
+    const images = window._galleryImages || [];
+    if (images.length === 0) return;
+
     let lb = document.getElementById('_homeCaseLightbox');
     if (!lb) {
       lb = document.createElement('div');
       lb.id = '_homeCaseLightbox';
-      lb.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:5000;align-items:center;justify-content:center;padding:40px;cursor:zoom-out';
-      lb.innerHTML = '<button id="_homeCaseLbClose" style="position:absolute;top:20px;right:24px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:1.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center">&times;</button><div id="_homeCaseLbContent" style="max-width:90vw;max-height:85vh;display:flex;align-items:center;justify-content:center"><img src="" style="max-width:100%;max-height:85vh;object-fit:contain;border-radius:8px"></div>';
+      lb.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:5000;cursor:zoom-out';
+      lb.innerHTML = `
+        <button class="lb-close" id="_homeCaseLbClose">&times;</button>
+        <button class="lb-nav lb-prev" id="_homeCaseLbPrev" aria-label="上一张">‹</button>
+        <div class="lb-content" id="_homeCaseLbContent">
+          <img src="" alt="大图" id="_homeCaseLbImg">
+          <div class="lb-counter" id="_homeCaseLbCounter"></div>
+        </div>
+        <button class="lb-nav lb-next" id="_homeCaseLbNext" aria-label="下一张">›</button>
+      `;
       lb.addEventListener('click', (e) => {
         if (e.target === lb || e.target.id === '_homeCaseLbClose') {
           lb.style.display = 'none';
@@ -781,10 +832,52 @@
         }
       });
       document.body.appendChild(lb);
+
+      // 键盘支持
+      document.addEventListener('keydown', (e) => {
+        if (lb.style.display !== 'flex') return;
+        if (e.key === 'Escape') { lb.style.display = 'none'; document.body.style.overflow = ''; }
+        if (e.key === 'ArrowLeft') document.getElementById('_homeCaseLbPrev').click();
+        if (e.key === 'ArrowRight') document.getElementById('_homeCaseLbNext').click();
+      });
     }
-    lb.querySelector('img').src = src;
+
+    window._lbCurrent = idx;
+    _updateLightbox();
     lb.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+  };
+
+  function _updateLightbox() {
+    const images = window._galleryImages || [];
+    const idx = window._lbCurrent || 0;
+    const img = document.getElementById('_homeCaseLbImg');
+    const counter = document.getElementById('_homeCaseLbCounter');
+    const prev = document.getElementById('_homeCaseLbPrev');
+    const next = document.getElementById('_homeCaseLbNext');
+
+    if (!img) return;
+    img.src = images[idx];
+
+    if (counter) counter.textContent = `${idx + 1} / ${images.length}`;
+    if (prev) prev.style.display = images.length > 1 ? '' : 'none';
+    if (next) next.style.display = images.length > 1 ? '' : 'none';
+
+    // 重新绑定导航点击
+    if (prev) {
+      prev.onclick = (e) => {
+        e.stopPropagation();
+        window._lbCurrent = (window._lbCurrent - 1 + images.length) % images.length;
+        _updateLightbox();
+      };
+    }
+    if (next) {
+      next.onclick = (e) => {
+        e.stopPropagation();
+        window._lbCurrent = (window._lbCurrent + 1) % images.length;
+        _updateLightbox();
+      };
+    }
   };
 
   // 点击遮罩关闭
