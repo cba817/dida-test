@@ -2,28 +2,20 @@
  * state.js — 状态管理模块
  * "空间增长系统" 应用核心状态
  * 三种驱动类型，各10条专属痛点
+ * 支持从 API 加载远程数据，保留硬编码作为 fallback
  */
 
 const AppState = (() => {
   const STORAGE_KEY = 'space_growth_state';
 
-  // === 应用配置 ===
+  // === 应用配置（硬编码为 fallback） ===
   const config = {
     drivers: [
       { id: 'PRODUCT', title: '产品驱动型', desc: '依靠功能迭代与性价比竞争', icon: '💎' },
       { id: 'CHANNEL', title: '渠道依赖型', desc: '依靠流量入口与合作伙伴渗透', icon: '🌐' },
       { id: 'USER', title: '关系网络型', desc: '依靠用户资产与生命周期经营', icon: '❤️' }
     ],
-    // 通用痛点（向后兼容）
-    pains: [
-      '获客成本太高/增长乏力',
-      '产品同质化严重/利润薄',
-      '团队执行力差/目标难达',
-      '过度依赖单一渠道',
-      '客户成交周期太长',
-      '缺乏差异化爆品'
-    ],
-    // 各驱动类型专属痛点（各10条）
+    // 各驱动类型专属痛点（硬编码 fallback）
     driverPains: {
       PRODUCT: [
         { id: 'p1_1', text: '产品功能同质化，陷入价格战泥潭' },
@@ -64,7 +56,16 @@ const AppState = (() => {
     }
   };
 
-  // === 诊断建议引擎（三种驱动类型，各10条痛点专属建议） ===
+  // === 远程数据（从 API 加载，覆盖硬编码） ===
+  let _remoteData = {
+    loaded: false,
+    site: null,
+    pains: null,    // 完整的 pains.json 结构 { drivers: [...] }
+    packages: null, // 完整的 packages 数组
+    cases: null     // 完整的 cases 数组
+  };
+
+  // === 诊断建议引擎（保持硬编码，不在管理后台管理） ===
   const diagnosisAdvice = {
     PRODUCT: {
       generic: '您当前的核心瓶颈在于产品竞争力与价值感知。建议从"卖产品"转向"品牌空间叙事"，通过沉浸式体验空间重塑产品价值感知，降低客户比价心理，让产品自己会说话。',
@@ -134,48 +135,139 @@ const AppState = (() => {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
-        // 合并默认值，防止新增字段缺失
         return { ...defaults, ...saved };
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) { /* ignore */ }
     return { ...defaults };
   }
 
   function save() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(_state));
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) { /* ignore */ }
   }
 
   function notify() {
     listeners.forEach(fn => fn({ ..._state }));
   }
 
-  // === 公开 API ===
+  // =============================================
+  // 远程数据加载
+  // =============================================
 
-  /** 获取当前状态的只读副本 */
+  /** 从 API 加载所有远程数据 */
+  async function initRemoteData() {
+    const svc = typeof apiService !== 'undefined' ? apiService : window.apiService;
+    if (!svc) {
+      console.warn('[State] apiService 未加载，使用本地数据');
+      return;
+    }
+
+    try {
+      // 并行拉取数据
+      const [siteRes, painsRes, packagesRes, casesRes] = await Promise.all([
+        svc.getSite(),
+        svc.getPains(),
+        svc.getPackages(),
+        svc.getCases()
+      ]);
+
+      if (siteRes && siteRes.success) {
+        _remoteData.site = siteRes.data;
+      }
+
+      if (painsRes && painsRes.success) {
+        _remoteData.pains = painsRes.data;
+      }
+
+      if (packagesRes && packagesRes.success) {
+        _remoteData.packages = packagesRes.data.packages || [];
+      }
+
+      if (casesRes && casesRes.success) {
+        _remoteData.cases = casesRes.data.data || casesRes.data;
+      }
+
+      _remoteData.loaded = true;
+      console.log('[State] 远程数据加载完成');
+    } catch (e) {
+      console.warn('[State] 远程数据加载异常，使用本地数据:', e.message);
+    }
+  }
+
+  // =============================================
+  // 公开 API
+  // =============================================
+
   function get() {
     return { ..._state };
   }
 
-  /** 获取配置 */
+  /** 获取配置（优先返回远程数据，否则使用硬编码 fallback） */
   function getConfig() {
+    if (_remoteData.pains) {
+      // 从远程 pains.json 结构构建完整的 config
+      return {
+        drivers: _remoteData.pains.drivers.map(d => ({
+          id: d.id,
+          title: d.title,
+          desc: d.desc,
+          icon: d.icon,
+          pains: d.pains  // 将 pains 挂载到 driver 上
+        })),
+        pains: ['获客成本太高/增长乏力'],
+        driverPains: _remoteData.pains.drivers.reduce((acc, d) => {
+          acc[d.id] = d.pains;
+          return acc;
+        }, {})
+      };
+    }
     return config;
   }
 
   /** 获取当前驱动类型的专属痛点列表 */
   function getDriverPains(driverId) {
-    if (!driverId || !config.driverPains[driverId]) {
-      return [];
+    if (_remoteData.pains) {
+      const driver = _remoteData.pains.drivers.find(d => d.id === driverId);
+      if (driver) return driver.pains;
     }
+    // fallback
+    if (!driverId || !config.driverPains[driverId]) return [];
     return config.driverPains[driverId];
   }
 
-  /** 设置单个状态值 */
+  /** 获取套餐列表 */
+  function getPackages() {
+    if (_remoteData.packages && _remoteData.packages.length > 0) {
+      return _remoteData.packages.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    }
+    return null; // 调用方处理 fallback
+  }
+
+  /** 获取案例列表 */
+  function getCases() {
+    if (_remoteData.cases && _remoteData.cases.length > 0) {
+      return _remoteData.cases.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    }
+    return null;
+  }
+
+  /** 获取站点设置 */
+  function getSite() {
+    return _remoteData.site || {
+      siteName: '空间增长系统',
+      siteDescription: '基于《商战思维》方法论，在线诊断您的企业增长破局点，获取针对性空间增长解决方案。',
+      logoPath: '',
+      logoText: '空间增长',
+      logoAccent: '系统'
+    };
+  }
+
+  /** 远程数据是否已加载 */
+  function isRemoteLoaded() {
+    return _remoteData.loaded;
+  }
+
   function set(key, value) {
     if (key in _state) {
       _state[key] = value;
@@ -184,7 +276,6 @@ const AppState = (() => {
     }
   }
 
-  /** 设置多个状态值 */
   function patch(updates) {
     Object.keys(updates).forEach(key => {
       if (key in _state) {
@@ -195,10 +286,8 @@ const AppState = (() => {
     notify();
   }
 
-  /** 订阅状态变化 */
   function subscribe(fn) {
     listeners.push(fn);
-    // 立即调用一次
     fn({ ..._state });
     return () => {
       const idx = listeners.indexOf(fn);
@@ -206,14 +295,12 @@ const AppState = (() => {
     };
   }
 
-  /** 重置到初始状态 */
   function reset() {
     _state = { ...defaults };
     save();
     notify();
   }
 
-  /** 切换主题 */
   function toggleTheme() {
     _state.isDarkMode = !_state.isDarkMode;
     document.body.classList.toggle('light-mode');
@@ -221,44 +308,37 @@ const AppState = (() => {
     notify();
   }
 
-  /** 选择驱动 */
   function selectDriver(driverId) {
-    const driver = config.drivers.find(d => d.id === driverId);
+    const cfg = getConfig();
+    const driver = cfg.drivers.find(d => d.id === driverId);
     if (driver) {
       _state.driver = driver.title;
       _state.driverId = driverId;
       _state.step = 2;
-      // 切换驱动时清空已选痛点（因为痛点列表变了）
       _state.pains = [];
       save();
       notify();
     }
   }
 
-  /** 切换痛点（支持新旧两种格式） */
   function togglePain(pain) {
-    // pain 可能是字符串（旧格式）或对象（新格式）
     const painText = typeof pain === 'object' ? pain.text : pain;
     const painId = typeof pain === 'object' ? pain.id : pain;
-    
+
     const idx = _state.pains.findIndex(p => {
-      if (typeof p === 'object') {
-        return p.id === painId || p.text === painText;
-      }
+      if (typeof p === 'object') return p.id === painId || p.text === painText;
       return p === painText;
     });
-    
+
     if (idx > -1) {
       _state.pains.splice(idx, 1);
     } else {
-      // 存储完整对象以便后续使用
       _state.pains.push(typeof pain === 'object' ? pain : { text: pain });
     }
     save();
     notify();
   }
 
-  /** 生成诊断建议 */
   function generateAdvice() {
     const { driverId, pains } = _state;
     if (!driverId) return '请先选择您的企业增长驱动类型。';
@@ -268,7 +348,6 @@ const AppState = (() => {
 
     let advice = driverData.generic;
 
-    // 如果有选中的痛点，拼入个性化建议
     if (pains.length > 0) {
       advice += '\n\n**针对性建议：**\n';
       pains.forEach(pain => {
@@ -283,7 +362,6 @@ const AppState = (() => {
     return advice;
   }
 
-  /** 设置联系人信息 */
   function setContactInfo(info) {
     _state.contactInfo = { ..._state.contactInfo, ...info };
     save();
@@ -300,6 +378,11 @@ const AppState = (() => {
     get,
     getConfig,
     getDriverPains,
+    getPackages,
+    getCases,
+    getSite,
+    isRemoteLoaded,
+    initRemoteData,
     set,
     patch,
     subscribe,

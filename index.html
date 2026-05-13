@@ -20,8 +20,8 @@
 
                 <div class="nav-links">
                     <a href="javascript:void(0)" onclick="AppState.reset()">🚀 开始诊断</a>
+                    <a href="cases.html">🏆 成功案例</a>
                     <a href="#packages">增长方案</a>
-                    <a href="#case-studies">成功案例</a>
                     <a href="#methodology">方法论</a>
                     <a class="btn btn-primary btn-sm nav-cta" href="javascript:void(0)" onclick="window.openContactModal()">立即预约</a>
                     <button class="theme-toggle" id="themeBtn">🌓</button>
@@ -48,7 +48,7 @@
                 <div class="footer-col">
                     <h4>快速导航</h4>
                     <a href="javascript:void(0)" onclick="AppState.reset()">🚀 开始诊断</a>
-                    <a href="#case-studies">成功案例</a>
+                    <a href="cases.html">🏆 成功案例</a>
                     <a href="#methodology">商战思维课程</a>
                     <a href="javascript:void(0)" onclick="window.openContactModal()">落地咨询服务</a>
                 </div>
@@ -126,6 +126,13 @@
 
     <!-- ====== 回到顶部 ====== -->
     <button class="back-to-top" id="backToTop" aria-label="回到顶部">↑</button>
+
+    <!-- ====== 案例详情弹窗 ====== -->
+    <div class="cases-detail-overlay" id="homeCasesDetailOverlay">
+        <div class="cases-detail-modal" id="homeCasesDetailContent">
+            <button class="cases-detail-close" onclick="window._closeHomeCaseDetail()">✕</button>
+        </div>
+    </div>
 
     <!-- ====== JavaScript ====== -->
     <script src="js/state.js"></script>

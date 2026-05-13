@@ -17,6 +17,25 @@
   // 1. 导航栏与主题
   // ==========================================
 
+  /** 更新 Logo 和站点名称 */
+  function updateSiteBranding() {
+    const site = state.getSite();
+    const logoText = document.querySelector('.logo-text');
+    const logoIcon = document.querySelector('.logo-icon');
+    if (logoText && site) {
+      logoText.innerHTML = `${site.logoText || '空间增长'}<span class="logo-accent">${site.logoAccent || '系统'}</span>`;
+    }
+    // 如果有上传的logo图片，替换图标
+    if (logoIcon && site && site.logoPath) {
+      logoIcon.innerHTML = `<img src="${site.logoPath}" alt="Logo" style="width:100%;height:100%;object-fit:contain;border-radius:6px">`;
+      logoIcon.style.background = 'none';
+    }
+    // 更新页面标题
+    if (site && site.siteName) {
+      document.title = site.siteName + ' | 全案诊断';
+    }
+  }
+
   /** 汉堡菜单切换 */
   function setupNav() {
     const hamburger = document.getElementById('hamburgerBtn');
@@ -26,7 +45,6 @@
         hamburger.classList.toggle('active');
         navLinks.classList.toggle('open');
       });
-      // 点击导航链接后关闭菜单
       navLinks.querySelectorAll('a').forEach(link => {
         link.addEventListener('click', () => {
           hamburger.classList.remove('active');
@@ -35,13 +53,11 @@
       });
     }
 
-    // 主题切换
     const themeBtn = document.getElementById('themeBtn');
     if (themeBtn) {
       themeBtn.addEventListener('click', state.toggleTheme);
     }
 
-    // 回到顶部按钮
     const backToTop = document.getElementById('backToTop');
     if (backToTop) {
       window.addEventListener('scroll', () => {
@@ -61,7 +77,6 @@
   // 2. 渲染引擎
   // ==========================================
 
-  // 记录上一次的 step，用于判断是否需要滚动
   let lastStep = null;
 
   function render() {
@@ -79,8 +94,7 @@
     }
 
     app.innerHTML = html;
-    
-    // 步骤切换时平滑滚动到顶部
+
     if (lastStep !== null && s.step !== lastStep) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -91,17 +105,12 @@
   // 2.1 痛点勾选局部更新（不触发全量render）
   // ==========================================
 
-  /** 更新单个痛点项的选中样式，不重建整个DOM */
   function updatePainItemUI(painId, isSelected) {
     const items = document.querySelectorAll('.check-item');
     items.forEach(item => {
       const checkbox = item.querySelector('input[type="checkbox"]');
       if (!checkbox) return;
-      // 从 onclick 属性中提取 painId 进行精确匹配
-      // 注意：HTML 中的属性值经过了实体编码，&quot; 表示 "
       const onclickAttr = item.getAttribute('onclick') || '';
-      // 匹配 &quot;id&quot;:&quot;painId&quot; 的形式（HTML实体编码后的JSON格式）
-      // 使用单词边界确保精确匹配，避免 p1_1 匹配到 p1_10
       const escapedId = painId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const exactMatchPattern = new RegExp(`&quot;id&quot;:&quot;${escapedId}&quot;`);
       if (exactMatchPattern.test(onclickAttr)) {
@@ -114,16 +123,13 @@
         }
       }
     });
-    // 更新计数
     const countEl = document.getElementById('selectedCount');
     if (countEl) {
       countEl.textContent = state.get().pains.length;
     }
   }
 
-  // 拦截 togglePain：在 step2 时使用局部更新而非全量 render
   const originalTogglePain = state.togglePain;
-  // 标记位：当 step2 中 togglePain 时设为 true，阻止 subscribe 触发全量 render
   let skipNextRender = false;
 
   state.togglePain = function(pain) {
@@ -131,21 +137,17 @@
     const painId = typeof pain === 'object' ? pain.id : pain;
     const painText = typeof pain === 'object' ? pain.text : pain;
 
-    // 判断当前是否已选中
     const wasSelected = s.pains.some(p => {
       if (typeof p === 'object') return p.id === painId || p.text === painText;
       return p === painText;
     });
 
-    // 标记跳过下一次 render
     if (s.step === 2) {
       skipNextRender = true;
     }
 
-    // 调用原始方法更新状态（会触发 notify → subscribe）
     originalTogglePain(pain);
 
-    // 局部 DOM 更新
     if (s.step === 2) {
       updatePainItemUI(painId, !wasSelected);
     }
@@ -155,14 +157,11 @@
   // 3. 第1步：选择驱动
   // ==========================================
 
-  // 三排错落滚动痛点关键词列表
   const painKeywordsRow1 = ['获客成本高', '产品同质化', '渠道冲突', '用户流失', '成交周期长', '品牌势能弱'];
   const painKeywordsRow2 = ['团队执行力差', '私域运营难', '差异化不足', '复购率低', '招商困难', '转化效率低'];
   const painKeywordsRow3 = ['价格战泥潭', '库存积压', '会员活跃度低', '口碑传播弱', '获客成本高', '产品同质化'];
 
-  // 生成一排关键词的HTML
   function renderKeywordRow(keywords, rowClass) {
-    // 复制一份用于无缝滚动
     const allKeywords = [...keywords, ...keywords];
     return `
       <div class="pain-tags-row ${rowClass}">
@@ -174,10 +173,11 @@
   }
 
   function renderStep1(config) {
+    const site = state.getSite();
     return `
       <section class="hero container">
-        <h1>让空间成为第一位销售</h1>
-        <p class="subtitle">基于《商战思维》方法论，诊断您的企业增长破局点</p>
+        <h1>${site.siteName || '让空间成为第一位销售'}</h1>
+        <p class="subtitle">${site.siteDescription || '基于《商战思维》方法论，诊断您的企业增长破局点'}</p>
         <div class="grid">
           ${config.drivers.map(d => `
             <div class="card" onclick="AppState.selectDriver('${d.id}')">
@@ -187,8 +187,6 @@
             </div>
           `).join('')}
         </div>
-        
-        <!-- 三排错落滚动痛点关键词展示 -->
         <div class="pain-tags-3d-container">
           <div class="pain-tags-3d-title">💡 我们将帮您解决这些增长难题</div>
           <div class="pain-tags-marquee-wrapper">
@@ -206,21 +204,17 @@
   // ==========================================
 
   function renderStep2(config, s) {
-    // 获取当前驱动类型的专属痛点列表
     const driverPains = state.getDriverPains(s.driverId) || [];
-    
-    // 如果有专属痛点，使用专属痛点；否则回退到通用痛点
     const painsToRender = driverPains.length > 0 ? driverPains : config.pains.map(text => ({ id: text, text }));
-    
-    // 驱动类型标题映射
+
     const driverTitles = {
       'PRODUCT': '产品驱动型企业',
       'CHANNEL': '渠道依赖型企业',
       'USER': '关系网络型企业'
     };
-    
+
     const driverTitle = driverTitles[s.driverId] || '企业';
-    
+
     return `
       <section class="container">
         <div style="text-align:center">
@@ -232,7 +226,6 @@
           ${painsToRender.map(p => {
             const painText = p.text;
             const painId = p.id;
-            // 检查是否已选中（支持对象格式和字符串格式）
             const isChecked = s.pains.some(selected => {
               if (typeof selected === 'object') {
                 return selected.id === painId || selected.text === painText;
@@ -240,7 +233,6 @@
               return selected === painText;
             });
             const checkedClass = isChecked ? 'checked' : '';
-            // 传递完整对象给 togglePain
             const painObj = JSON.stringify(p).replace(/"/g, '&quot;');
             return `
               <label class="check-item ${checkedClass}" onclick="AppState.togglePain(${painObj})">
@@ -314,7 +306,7 @@
         </div>
 
         <!-- 成功案例 -->
-        ${renderCaseStudiesPlaceholder()}
+        ${renderCaseStudies()}
 
         <!-- 方法论 -->
         ${renderMethodology()}
@@ -332,88 +324,115 @@
   }
 
   // ==========================================
-  // 6. 套餐渲染
+  // 6. 套餐渲染（动态数据 + fallback）
   // ==========================================
 
+  // 硬编码的 fallback 套餐数据
+  const FALLBACK_PACKAGES = [
+    {
+      id: 'pkg_basic', title: '🟢 基础信任系统', icon: '🟢',
+      price: '¥6,800', priceNote: '起',
+      featuredThreshold: { minPains: 1, maxPains: 3 },
+      resultTitle: '交付结果',
+      resultItems: ['品牌正规化感官提升', '消除初访客户的基本不信任感'],
+      features: ['LOGO立体视觉系统', '品牌主色调标准应用', '超级标语墙设计', '基础灯光氛围方案']
+    },
+    {
+      id: 'pkg_conversion', title: '🔵 成交转化系统', icon: '🔵',
+      price: '¥18,800', priceNote: '',
+      featuredThreshold: { minPains: 4, maxPains: 6 },
+      resultTitle: '核心增长结果',
+      resultItems: ['转化率提升 10%-40%', '降低沟通成本，缩短成交周期'],
+      features: [
+        '<strong>品牌故事墙：</strong>建立信任背书',
+        '<strong>业务可视化：</strong>降低解释成本',
+        '<strong>成交话术嵌入：</strong>墙面即销售辅助',
+        '<strong>客户案例墙：</strong>自动化说服逻辑'
+      ]
+    },
+    {
+      id: 'pkg_premium', title: '🔴 空间增长全案', icon: '🔴',
+      price: '¥58,000', priceNote: '+',
+      featuredThreshold: { minPains: 7, maxPains: 10 },
+      resultTitle: '核心增长结果',
+      resultItems: ['空间自带流量，成为内容工厂', '品牌溢价倍增，招商利器'],
+      features: [
+        '<strong>客户参观动线：</strong>剧场版路径设计',
+        '<strong>沉浸式体验区：</strong>应用场景模拟',
+        '<strong>短视频场景墙：</strong>自带抖音传播基因',
+        '<strong>IP化视觉全案：</strong>品牌人格化打造'
+      ]
+    }
+  ];
+
   function renderPackages(painCount) {
-    // 根据痛点数量决定主推套餐
-    // 1-3个痛点 → 基础信任系统(index 0)
-    // 4-6个痛点 → 成交转化系统(index 1)
-    // 7-10个痛点 → 空间增长全案(index 2)
-    let featuredIndex = 1; // 默认中间档
-    if (painCount <= 3) {
-      featuredIndex = 0;
-    } else if (painCount >= 7) {
-      featuredIndex = 2;
+    // 尝试从远程数据获取套餐
+    let pkgs = state.getPackages();
+    // fallback 到硬编码
+    if (!pkgs || pkgs.length === 0) {
+      pkgs = FALLBACK_PACKAGES;
     }
 
-    const pkgs = [
-      {
-        title: '🟢 基础信任系统',
-        price: '¥6,800',
-        priceNote: '起',
-        result: { title: '交付结果', items: ['品牌正规化感官提升', '消除初访客户的基本不信任感'] },
-        features: ['LOGO立体视觉系统', '品牌主色调标准应用', '超级标语墙设计', '基础灯光氛围方案']
-      },
-      {
-        title: '🔵 成交转化系统',
-        price: '¥18,800',
-        priceNote: '',
-        result: { title: '核心增长结果', items: ['转化率提升 10%-40%', '降低沟通成本，缩短成交周期'] },
-        features: [
-          '<strong>品牌故事墙：</strong>建立信任背书',
-          '<strong>业务可视化：</strong>降低解释成本',
-          '<strong>成交话术嵌入：</strong>墙面即销售辅助',
-          '<strong>客户案例墙：</strong>自动化说服逻辑'
-        ]
-      },
-      {
-        title: '🔴 空间增长全案',
-        price: '¥58,000',
-        priceNote: '+',
-        result: { title: '核心增长结果', items: ['空间自带流量，成为内容工厂', '品牌溢价倍增，招商利器'] },
-        features: [
-          '<strong>客户参观动线：</strong>剧场版路径设计',
-          '<strong>沉浸式体验区：</strong>应用场景模拟',
-          '<strong>短视频场景墙：</strong>自带抖音传播基因',
-          '<strong>IP化视觉全案：</strong>品牌人格化打造'
-        ]
+    // 根据痛点数量确定主推套餐
+    let featuredPkg = null;
+    for (const pkg of pkgs) {
+      const th = pkg.featuredThreshold || { minPains: 1, maxPains: 99 };
+      if (painCount >= th.minPains && painCount <= th.maxPains) {
+        featuredPkg = pkg;
+        break;
       }
-    ];
+    }
+    // 如果没匹配到，默认推荐第一个
+    if (!featuredPkg && pkgs.length > 0) {
+      featuredPkg = pkgs[0];
+    }
 
-    // 动态设置主推套餐
-    pkgs.forEach((pkg, index) => {
-      pkg.featured = index === featuredIndex;
-      pkg.badge = index === featuredIndex ? '🏆 主推方案' : null;
-    });
+    return pkgs.map(p => {
+      const isFeatured = featuredPkg && p.id === featuredPkg.id;
+      const pkgTitle = p.title || '';
+      const pkgPrice = p.price || '¥0';
+      const pkgPriceNote = p.priceNote || '';
+      const resultTitle = p.resultTitle || '交付结果';
+      const resultItems = p.resultItems || [];
+      const features = p.features || [];
 
-    return pkgs.map(p => `
-      <div class="pkg-card ${p.featured ? 'featured' : ''}">
-        ${p.badge ? `<div class="pkg-badge">${p.badge}</div>` : ''}
-        <h3>${p.title}</h3>
-        <div class="pkg-price">${p.price}${p.priceNote ? `<span> ${p.priceNote}</span>` : ''}</div>
+      return `
+      <div class="pkg-card ${isFeatured ? 'featured' : ''}">
+        ${isFeatured ? '<div class="pkg-badge">🏆 主推方案</div>' : ''}
+        <h3>${pkgTitle}</h3>
+        <div class="pkg-price">${pkgPrice}${pkgPriceNote ? `<span> ${pkgPriceNote}</span>` : ''}</div>
         <div class="pkg-result">
-          <strong>${p.result.title}：</strong>
-          <p>${p.result.items.map(i => `✔ ${i}`).join('<br>')}</p>
+          <strong>${resultTitle}：</strong>
+          <p>${resultItems.map(i => `✔ ${i}`).join('<br>')}</p>
         </div>
         <ul class="feature-list">
-          ${p.features.map(f => `<li>${f}</li>`).join('')}
+          ${features.map(f => `<li>${f}</li>`).join('')}
         </ul>
-        <button class="btn btn-primary" onclick="window.openContactModal('${p.title}')">立即预约诊断</button>
-      </div>
-    `).join('');
+        <button class="btn btn-primary" onclick="window.openContactModal('${pkgTitle.replace(/['"]/g, '')}')">立即预约诊断</button>
+      </div>`;
+    }).join('');
   }
 
   // ==========================================
-  // 7. 成功案例占位
+  // 7. 成功案例渲染（动态数据 + fallback）
   // ==========================================
 
-  function renderCaseStudiesPlaceholder() {
-    const cases = [
-      { tag: '企业服务', title: '某SaaS企业总部空间升级', desc: '通过空间动线设计，将客户参访转化率从12%提升至45%', stat: '275%', statLabel: '转化提升' },
-      { tag: '零售消费', title: '某连锁品牌旗舰店重塑', desc: '沉浸式体验空间设计，单店月均客流增长300%', stat: '300%', statLabel: '客流增长' },
-      { tag: 'B2B制造', title: '某工业设备企业展厅改造', desc: '展厅升级后，大客户签约周期从6个月缩短至45天', stat: '75%', statLabel: '周期缩短' }
-    ];
+  // 硬编码的 fallback 案例数据
+  const FALLBACK_CASES = [
+    { tag: '企业服务', title: '某SaaS企业总部空间升级', desc: '通过空间动线设计，将客户参访转化率从12%提升至45%', stat: '275%', statLabel: '转化提升', imagePath: '', imageEmoji: '📊' },
+    { tag: '零售消费', title: '某连锁品牌旗舰店重塑', desc: '沉浸式体验空间设计，单店月均客流增长300%', stat: '300%', statLabel: '客流增长', imagePath: '', imageEmoji: '🛍️' },
+    { tag: 'B2B制造', title: '某工业设备企业展厅改造', desc: '展厅升级后，大客户签约周期从6个月缩短至45天', stat: '75%', statLabel: '周期缩短', imagePath: '', imageEmoji: '🏭' }
+  ];
+
+  function renderCaseStudies() {
+    // 尝试从远程数据获取案例
+    let cases = state.getCases();
+    // fallback 到硬编码
+    if (!cases || cases.length === 0) {
+      cases = FALLBACK_CASES;
+    }
+    // 存储到全局供弹窗使用
+    window._homeCasesData = cases;
 
     return `
       <section id="case-studies" style="margin-top:80px">
@@ -421,9 +440,12 @@
         <p class="section-subtitle">我们用空间思维帮助了众多企业实现增长突破</p>
         <div class="case-grid">
           ${cases.map(c => `
-            <div class="case-card">
+            <div class="case-card" style="cursor:default">
               <div class="case-image">
-                <span style="opacity:0.3">📊</span>
+                ${c.imagePath
+                  ? `<img src="${c.imagePath}" alt="${c.title}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><span style="opacity:0.3;display:none">${c.imageEmoji || '📊'}</span>`
+                  : `<span style="opacity:0.3">${c.imageEmoji || '📊'}</span>`
+                }
               </div>
               <div class="case-body">
                 <span class="case-tag">${c.tag}</span>
@@ -435,9 +457,9 @@
                     <div class="case-stat-label">${c.statLabel}</div>
                   </div>
                 </div>
+                <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="window._openHomeCaseDetail(${c.id})">查看详情 →</button>
               </div>
-            </div>
-          `).join('')}
+            </div>`).join('')}
         </div>
       </section>
     `;
@@ -513,14 +535,11 @@
 
     if (!overlay) return;
 
-    // 关闭
     const closeModal = () => {
       overlay.classList.remove('open');
       if (form) form.style.display = 'block';
       if (success) success.classList.remove('open');
-      // 重置表单
       if (form) form.reset();
-      // 清除错误
       overlay.querySelectorAll('.form-error').forEach(el => el.classList.remove('visible'));
       overlay.querySelectorAll('.form-input').forEach(el => el.classList.remove('error'));
     };
@@ -530,19 +549,16 @@
       if (e.target === overlay) closeModal();
     });
 
-    // 表单提交
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         let valid = true;
 
-        // 校验
         const name = form.querySelector('#leadName');
         const phone = form.querySelector('#leadPhone');
         const nameError = form.querySelector('#nameError');
         const phoneError = form.querySelector('#phoneError');
 
-        // 姓名
         if (!name.value.trim()) {
           name.classList.add('error');
           nameError.textContent = '请填写您的姓名';
@@ -553,7 +569,6 @@
           nameError.classList.remove('visible');
         }
 
-        // 手机
         const phoneRegex = /^1[3-9]\d{9}$/;
         if (!phone.value.trim()) {
           phone.classList.add('error');
@@ -572,7 +587,6 @@
 
         if (!valid) return;
 
-        // 构建数据
         const s = state.get();
         const leadData = {
           name: name.value.trim(),
@@ -586,7 +600,6 @@
           timestamp: new Date().toISOString()
         };
 
-        // 保存联系信息到状态
         state.setContactInfo({
           name: leadData.name,
           phone: leadData.phone,
@@ -594,10 +607,8 @@
           note: leadData.note
         });
 
-        // 提交到后端
         const result = await api.captureLead(leadData);
 
-        // 无论后端是否成功，都显示成功
         if (form) form.style.display = 'none';
         if (success) {
           success.classList.add('open');
@@ -605,7 +616,6 @@
           success.querySelector('p').textContent = '感谢您的信任！我们的专业顾问将在24小时内与您联系，为您定制专属增长方案。';
         }
 
-        // 也提交诊断数据
         api.submitDiagnosis({
           driver: leadData.driver,
           driverId: leadData.driverId,
@@ -615,7 +625,6 @@
     }
   }
 
-  // 打开 modal（供全局调用）
   window.openContactModal = (pkgName) => {
     const overlay = document.getElementById('contactModal');
     if (overlay) {
@@ -627,7 +636,6 @@
         form.dataset.selectedPkg = pkgName || '';
       }
       if (success) success.classList.remove('open');
-      // 更新标题
       const title = overlay.querySelector('.modal-header h3');
       if (title) {
         title.textContent = pkgName ? `预约咨询：${pkgName}` : '获取专属增长方案';
@@ -635,7 +643,6 @@
     }
   };
 
-  // 跳转到第3步（供全局调用）
   window.appGoToStep3 = () => {
     const s = state.get();
     if (s.pains.length === 0) {
@@ -654,13 +661,20 @@
   // 11. 初始化
   // ==========================================
 
-  function init() {
+  async function init() {
     setupNav();
     setupContactModal();
 
+    // 加载远程数据（等待完成后更新品牌标识）
+    try {
+      await state.initRemoteData();
+    } catch (e) {
+      console.warn('[App] 远程数据加载失败，使用本地数据', e);
+    }
+    updateSiteBranding();
+
     // 订阅状态变化，自动重新渲染
     state.subscribe(() => {
-      // 如果是 step2 中的痛点勾选，跳过全量 render（已做局部更新）
       if (skipNextRender) {
         skipNextRender = false;
         return;
@@ -669,7 +683,117 @@
     });
   }
 
-  // DOM 加载完成后初始化
+  // ==========================================
+  // 案例详情弹窗（首页内联展示）
+  // ==========================================
+
+  function renderMd(text) {
+    if (!text) return '';
+    let html = text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/^## (.+)$/gm, '<h3 class="md-h3">$1</h3>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/^- (.+)$/gm, '<li class="md-li">$1</li>')
+      .replace(/\n\n/g, '</p><p class="md-p">')
+      .replace(/\n(?!<[hl])/g, '<br>');
+    html = html.replace(/((?:<li[^>]*>.*?<\/li>\n?)+)/g, '<ul class="md-ul">$1</ul>');
+    html = '<p class="md-p">' + html + '</p>';
+    html = html.replace(/<p class="md-p"><br><\/p>/g, '');
+    return html;
+  }
+
+  window._openHomeCaseDetail = function (id) {
+    const cases = window._homeCasesData || [];
+    const c = cases.find(item => item.id === id);
+    if (!c) return;
+
+    const hasImage = c.imagePath && c.imagePath.trim();
+    const images = c.images || [];
+    const galleryHtml = images.length > 0 ? `
+      <div class="cases-detail-gallery" style="margin:16px 0">
+        <h3 class="gallery-title">📸 案例展示</h3>
+        <div class="gallery-grid">
+          ${images.map((img, idx) => `
+            <div class="gallery-item" onclick="window._openCaseLightbox('${img}')">
+              <img src="${img}" alt="展示图 ${idx + 1}" loading="lazy" onerror="this.outerHTML='<span class=\\'gallery-fallback\\'>📷</span>'">
+            </div>`).join('')}
+        </div>
+      </div>` : '';
+
+    const descriptionHtml = c.description ? `
+      <div class="cases-detail-section">
+        <h3 class="section-title-inline">📋 设计方案说明</h3>
+        <div class="design-plan-content">${renderMd(c.description)}</div>
+      </div>` : '';
+
+    const overlay = document.getElementById('homeCasesDetailOverlay');
+    const content = document.getElementById('homeCasesDetailContent');
+
+    content.innerHTML = `
+      <button class="cases-detail-close" onclick="window._closeHomeCaseDetail()">✕</button>
+      <div class="cases-detail-image">
+        ${hasImage
+          ? `<img src="${c.imagePath}" alt="${c.title}" onerror="this.outerHTML='<span class=\\"img-fallback\\">${c.imageEmoji || '📊'}</span>'"><span class="cases-detail-tag">${c.tag || '案例'}</span>`
+          : `<span class="img-fallback">${c.imageEmoji || '📊'}</span><span class="cases-detail-tag">${c.tag || '案例'}</span>`
+        }
+      </div>
+      <div class="cases-detail-body">
+        <h2>${c.title}</h2>
+        <p class="detail-desc">${c.desc || ''}</p>
+        ${c.stat ? `
+        <div class="cases-detail-stats">
+          <div class="cases-detail-stat">
+            <div class="cases-detail-stat-val">${c.stat}</div>
+            <div class="cases-detail-stat-lbl">${c.statLabel || '提升'}</div>
+          </div>
+        </div>` : ''}
+        ${descriptionHtml}
+        ${galleryHtml}
+        <div class="detail-cta">
+          <button class="btn btn-primary" onclick="window.openContactModal('${c.title}')">🚀 获取同款方案</button>
+          <button class="btn btn-outline" onclick="window._closeHomeCaseDetail()">关闭</button>
+        </div>
+      </div>
+    `;
+
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  };
+
+  window._closeHomeCaseDetail = function () {
+    const overlay = document.getElementById('homeCasesDetailOverlay');
+    if (overlay) overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  };
+
+  // 案例 Lightbox
+  window._openCaseLightbox = function (src) {
+    let lb = document.getElementById('_homeCaseLightbox');
+    if (!lb) {
+      lb = document.createElement('div');
+      lb.id = '_homeCaseLightbox';
+      lb.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);z-index:5000;align-items:center;justify-content:center;padding:40px;cursor:zoom-out';
+      lb.innerHTML = '<button id="_homeCaseLbClose" style="position:absolute;top:20px;right:24px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.1);border:none;color:#fff;font-size:1.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center">&times;</button><div id="_homeCaseLbContent" style="max-width:90vw;max-height:85vh;display:flex;align-items:center;justify-content:center"><img src="" style="max-width:100%;max-height:85vh;object-fit:contain;border-radius:8px"></div>';
+      lb.addEventListener('click', (e) => {
+        if (e.target === lb || e.target.id === '_homeCaseLbClose') {
+          lb.style.display = 'none';
+          document.body.style.overflow = '';
+        }
+      });
+      document.body.appendChild(lb);
+    }
+    lb.querySelector('img').src = src;
+    lb.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  };
+
+  // 点击遮罩关闭
+  document.addEventListener('click', (e) => {
+    if (e.target.id === 'homeCasesDetailOverlay') {
+      window._closeHomeCaseDetail();
+    }
+  });
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {

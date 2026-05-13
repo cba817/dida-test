@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成功案例 | 空间增长系统</title>
+    <meta name="description" content="空间增长系统成功案例，涵盖企业服务、零售消费、B2B制造等多行业空间增长实战经验。">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/cases.css">
+</head>
+<body>
+
+    <!-- ====== 导航栏 ====== -->
+    <header>
+        <div class="container">
+            <nav>
+                <div class="logo">
+                    <div class="logo-icon">⬡</div>
+                    <span class="logo-text">空间增长<span class="logo-accent">系统</span></span>
+                </div>
+
+                <div class="nav-links">
+                    <a href="index.html">🏠 首页</a>
+                    <a href="index.html#packages">增长方案</a>
+                    <a href="cases.html" class="active">成功案例</a>
+                    <a href="index.html#methodology">方法论</a>
+                    <a class="btn btn-primary btn-sm nav-cta" href="javascript:void(0)" onclick="window._casesOpenContact()">立即预约</a>
+                    <button class="theme-toggle" id="themeBtn">🌓</button>
+                </div>
+
+                <button class="hamburger" id="hamburgerBtn">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ====== Hero ====== -->
+    <section class="cases-hero">
+        <div class="container">
+            <h1>🏆 成功案例</h1>
+            <p>我们用空间思维帮助众多企业实现增长突破，以下是部分精选案例</p>
+            <div class="cases-hero-stats" id="heroStats">
+                <div class="cases-hero-stat">
+                    <div class="cases-hero-stat-value">--</div>
+                    <div class="cases-hero-stat-label">加载中...</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ====== 案例列表 ====== -->
+    <section class="cases-section">
+        <div class="container">
+
+            <!-- 筛选栏 -->
+            <div class="cases-filter-bar">
+                <div class="cases-filter-inner">
+                    <span class="cases-filter-label">🔍 按行业筛选：</span>
+                    <div id="filterBar"></div>
+                </div>
+            </div>
+
+            <!-- 加载中 -->
+            <div class="cases-loading" id="casesLoading" style="text-align:center;padding:60px 0">
+                <div style="font-size:3rem;margin-bottom:16px;opacity:0.4">📂</div>
+                <p style="color:var(--text-dim)">正在加载案例数据...</p>
+            </div>
+
+            <!-- 空状态 -->
+            <div class="cases-empty" id="casesEmpty" style="display:none">
+                <div class="empty-icon">📋</div>
+                <p>暂无案例数据</p>
+            </div>
+
+            <!-- 案例网格 -->
+            <div class="cases-grid" id="casesGrid"></div>
+
+            <!-- 底部CTA -->
+            <div style="text-align:center;margin-top:60px;padding:40px 20px;background:var(--bg-card);border-radius:var(--radius-lg);border:1px solid var(--border)">
+                <h3 style="margin-bottom:12px">📈 您也想实现这样的增长？</h3>
+                <p style="color:var(--text-secondary);margin-bottom:20px">立即预约诊断，获取专属空间增长方案</p>
+                <button class="btn btn-primary" onclick="window._casesOpenContact()">🚀 立即预约诊断</button>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ====== 详情弹窗 ====== -->
+    <div class="cases-detail-overlay" id="casesDetailOverlay">
+        <div class="cases-detail-modal" id="casesDetailContent">
+            <!-- 由 JS 动态渲染 -->
+        </div>
+    </div>
+
+    <!-- ====== 联系表单弹窗 ====== -->
+    <div class="cases-contact-overlay" id="casesContactOverlay">
+        <div class="cases-contact-modal">
+            <button class="modal-close" onclick="window._casesCloseContact()">&times;</button>
+            <h3 id="casesContactTitle">🚀 获取增长方案</h3>
+
+            <form id="casesLeadForm" novalidate>
+                <div class="form-group">
+                    <label>您的姓名 <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="casesLeadName" placeholder="请输入您的姓名">
+                    <div class="form-error" id="casesNameError">请填写您的姓名</div>
+                </div>
+                <div class="form-group">
+                    <label>手机号码 <span class="required">*</span></label>
+                    <input type="tel" class="form-input" id="casesLeadPhone" placeholder="请输入您的手机号">
+                    <div class="form-error" id="casesPhoneError">请填写正确的手机号</div>
+                </div>
+                <div class="form-group">
+                    <label>公司名称</label>
+                    <input type="text" class="form-input" id="casesLeadCompany" placeholder="请输入公司名称（选填）">
+                </div>
+                <div class="form-group">
+                    <label>备注信息</label>
+                    <textarea class="form-input" id="casesLeadNote" rows="3" placeholder="请描述您的需求（选填）" style="resize:vertical;min-height:60px"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">提交预约 🚀</button>
+                <p style="text-align:center;margin-top:12px;font-size:0.75rem;color:var(--text-dim)">我们承诺严格保护您的隐私信息</p>
+            </form>
+
+            <div class="form-success" id="casesFormSuccess">
+                <div class="form-success-icon">✅</div>
+                <h4>提交成功！</h4>
+                <p>我们的专业顾问将在24小时内与您联系</p>
+                <button class="btn btn-secondary" style="margin-top:20px" onclick="
+                    document.getElementById('casesContactOverlay').classList.remove('open');
+                    document.getElementById('casesLeadForm').style.display = 'block';
+                    document.getElementById('casesFormSuccess').classList.remove('open');
+                    document.getElementById('casesLeadForm').reset();
+                ">我知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== 回到顶部 ====== -->
+    <button class="back-to-top" id="backToTop" aria-label="回到顶部">↑</button>
+
+    <!-- ====== JavaScript ====== -->
+    <script>
+      // 汉堡菜单 + 主题切换 + 回到顶部（复用主站逻辑的简化版）
+      document.addEventListener('DOMContentLoaded', function() {
+        // 汉堡菜单
+        const hamburger = document.getElementById('hamburgerBtn');
+        const navLinks = document.querySelector('.nav-links');
+        if (hamburger && navLinks) {
+          hamburger.addEventListener('click', function() {
+            hamburger.classList.toggle('active');
+            navLinks.classList.toggle('open');
+          });
+          navLinks.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', function() {
+              hamburger.classList.remove('active');
+              navLinks.classList.remove('open');
+            });
+          });
+        }
+
+        // 主题切换
+        const themeBtn = document.getElementById('themeBtn');
+        if (themeBtn) {
+          var isDark = !document.body.classList.contains('light-mode');
+          themeBtn.addEventListener('click', function() {
+            isDark = !isDark;
+            document.body.classList.toggle('light-mode');
+            if (typeof AppState !== 'undefined') AppState.set('isDarkMode', isDark);
+          });
+        }
+
+        // 回到顶部
+        const backToTop = document.getElementById('backToTop');
+        if (backToTop) {
+          window.addEventListener('scroll', function() {
+            backToTop.classList.toggle('visible', window.scrollY > 400);
+          });
+          backToTop.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+        }
+      });
+    </script>
+    <script src="js/cases.js"></script>
+</body>
+</html>

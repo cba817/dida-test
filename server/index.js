@@ -6,7 +6,9 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const apiRoutes = require('./routes/api');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -16,8 +18,8 @@ const PORT = process.env.PORT || 3001;
 // CORS — 允许前端跨域访问
 app.use(cors({
   origin: ['http://localhost:5500', 'http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:8000'],
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // JSON 请求体解析
@@ -33,13 +35,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// === 静态文件服务（生产环境可直接托管前端） ===
-// 开发时前端通过 Live Server 或其他方式运行
-// 生产时取消注释以下行，并将前端文件放在 ../ 目录
-// app.use(express.static(path.join(__dirname, '..')));
+// === 静态文件服务 ===
+// 托管前端页面
+app.use(express.static(path.join(__dirname, '..')));
+// 托管管理后台页面
+app.use('/admin', express.static(path.join(__dirname, '..', 'admin')));
+// 托管上传文件
+const uploadDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadDir));
 
 // === API 路由 ===
 app.use('/api', apiRoutes);
+app.use('/api/admin', adminRoutes);
 
 // === 404 处理 ===
 app.use((req, res) => {
@@ -55,8 +65,9 @@ app.use((err, req, res, next) => {
 // === 启动服务 ===
 app.listen(PORT, () => {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('  空间增长系统 API 服务已启动');
-  console.log(`  地址: http://localhost:${PORT}`);
-  console.log(`  健康检查: http://localhost:${PORT}/api/health`);
+  console.log('  空间增长系统 服务已启动');
+  console.log(`  前台: http://localhost:${PORT}`);
+  console.log(`  管理后台: http://localhost:${PORT}/admin`);
+  console.log(`  API: http://localhost:${PORT}/api/health`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 });

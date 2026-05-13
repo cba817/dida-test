@@ -39,7 +39,8 @@ const apiService = (() => {
         throw new Error(data.message || `请求失败 (${response.status})`);
       }
 
-      return { success: true, data };
+      // 服务端已返回 { success, data } 格式，直接透传
+      return data;
     } catch (error) {
       // 如果是网络错误（后端未启动）
       if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
@@ -77,11 +78,29 @@ const apiService = (() => {
     return request('/articles');
   }
 
+  /** 获取站点设置 */
+  async function getSite() {
+    return request('/site');
+  }
+
+  /** 获取驱动及痛点数据 */
+  async function getPains() {
+    return request('/pains');
+  }
+
+  /** 获取套餐列表 */
+  async function getPackages() {
+    return request('/packages');
+  }
+
   return {
     submitDiagnosis,
     captureLead,
     getCases,
     getArticles,
+    getSite,
+    getPains,
+    getPackages,
   };
 })();
 

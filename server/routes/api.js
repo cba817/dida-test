@@ -1,45 +1,19 @@
 /**
  * API 路由 - /api/*
- * 处理诊断提交、线索捕获、案例/文章返回
+ * 处理诊断提交、线索捕获、案例/站点/套餐/痛点数据返回
+ * 数据从 db JSON 文件读取，支持管理后台动态更新
  */
 
 const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const { readJSON } = require('../utils/fileDb');
 
 // === 数据库路径 ===
 const DB_PATH = path.join(__dirname, '..', 'db', 'leads.json');
-const CASES = [
-  {
-    id: 1,
-    tag: '企业服务',
-    title: '某SaaS企业总部空间升级',
-    desc: '通过空间动线设计，将客户参访转化率从12%提升至45%',
-    stat: '275%',
-    statLabel: '转化提升',
-    image: '📊'
-  },
-  {
-    id: 2,
-    tag: '零售消费',
-    title: '某连锁品牌旗舰店重塑',
-    desc: '沉浸式体验空间设计，单店月均客流增长300%',
-    stat: '300%',
-    statLabel: '客流增长',
-    image: '🛍️'
-  },
-  {
-    id: 3,
-    tag: 'B2B制造',
-    title: '某工业设备企业展厅改造',
-    desc: '展厅升级后，大客户签约周期从6个月缩短至45天',
-    stat: '75%',
-    statLabel: '周期缩短',
-    image: '🏭'
-  }
-];
 
+// 保留硬编码的文章数据（非管理需求，保持现状）
 const ARTICLES = [
   {
     id: 1,
@@ -66,6 +40,7 @@ const ARTICLES = [
 /** 读取 leads 数据库 */
 function readLeads() {
   try {
+    if (!fs.existsSync(DB_PATH)) return [];
     const raw = fs.readFileSync(DB_PATH, 'utf-8');
     return JSON.parse(raw);
   } catch {
@@ -75,10 +50,55 @@ function readLeads() {
 
 /** 写入 leads 数据库 */
 function writeLeads(data) {
+  const dir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
   fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-// === 路由定义 ===
+// === 公开数据API（无需认证，用于前台展示） ===
+
+/** GET /api/site — 获取站点设置 */
+router.get('/site', (req, res) => {
+  const site = readJSON('site.json', {
+    siteName: '空间增长系统',
+    siteDescription: '基于《商战思维》方法论，在线诊断您的企业增长破局点。',
+    logoPath: '',
+    logoText: '空间增长',
+    logoAccent: '系统'
+  });
+  res.json({ success: true, data: site });
+});
+
+/** GET /api/pains — 获取全部驱动及其痛点 */
+router.get('/pains', (req, res) => {
+  const data = readJSON('pains.json', { drivers: [] });
+  res.json({ success: true, data });
+});
+
+/** GET /api/packages — 获取套餐列表 */
+router.get('/packages', (req, res) => {
+  const data = readJSON('packages.json', { packages: [] });
+  // 按 sortOrder 排序
+  data.packages.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  res.json({ success: true, data });
+});
+
+/** GET /api/cases — 获取成功案例（从 db 读取） */
+router.get('/cases', (req, res) => {
+  const data = readJSON('cases.json', { cases: [] });
+  // 按 sortOrder 排序
+  data.cases.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  res.json({ success: true, data: data.cases });
+});
+
+/** GET /api/articles — 获取文章列表（保留硬编码） */
+router.get('/articles', (req, res) => {
+  res.json({ success: true, data: ARTICLES });
+});
+
+// === 诊断 & 线索 ===
 
 /** POST /api/diagnose — 提交诊断结果 */
 router.post('/diagnose', (req, res) => {
@@ -88,9 +108,6 @@ router.post('/diagnose', (req, res) => {
     return res.status(400).json({ message: '缺少诊断数据' });
   }
 
-  // 简单记录到数据库
-  const leads = readLeads();
-  // 诊断记录不单独存储，关联到线索中
   console.log(`[诊断] 驱动=${driver} 痛点=${pains?.join(',') || '无'}`);
 
   res.json({ success: true, message: '诊断数据已记录' });
@@ -133,16 +150,6 @@ router.post('/lead/submit', (req, res) => {
   console.log(`[线索] 新线索: ${name} | ${phone} | ${company || '无公司'}`);
 
   res.json({ success: true, message: '线索提交成功', leadId: lead.id });
-});
-
-/** GET /api/cases — 获取成功案例 */
-router.get('/cases', (req, res) => {
-  res.json({ success: true, data: CASES });
-});
-
-/** GET /api/articles — 获取文章列表 */
-router.get('/articles', (req, res) => {
-  res.json({ success: true, data: ARTICLES });
 });
 
 /** GET /api/health — 健康检查 */
